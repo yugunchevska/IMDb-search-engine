@@ -25,12 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class Extraction {
+public class OMDbManager {
 
 	private final String MAIN_PATH = "D:" + File.separator + "”ÌË" + File.separator + "Eclipse new" + File.separator
 			+ "Project vol.2";
-	private final String ERROR_MOVIE = "{\"Response\":\"False\",\"Error\":\"Movie not found!\"}";
-	private final String ERROR_SEASON = "{\"Response\":\"False\",\"Error\":\"Series or season not found!\"}";
+	private final static String ERROR_MOVIE = "{\"Response\":\"False\",\"Error\":\"Movie not found!\"}";
+	private final static String ERROR_SEASON = "{\"Response\":\"False\",\"Error\":\"Series or season not found!\"}";
 
 	public String getMovie(String[] result) throws IOException {
 
@@ -95,7 +95,7 @@ public class Extraction {
 		return path;
 	}
 
-	public String getTVShow(String[] result) {
+	public String getTVSeries(String[] result) {
 
 		String season = "--season=";
 		// take the title
