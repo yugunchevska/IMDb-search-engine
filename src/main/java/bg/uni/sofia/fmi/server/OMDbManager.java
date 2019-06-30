@@ -19,6 +19,13 @@ import bg.uni.sofia.fmi.server.util.OMDbManagerConstants;
 import bg.uni.sofia.fmi.server.util.OMDbManagerUtil;
 
 public class OMDbManager {
+	
+	public OMDbManager() {
+		File movieInfoFolder = new File(OMDbManagerConstants.MOVIE_INFO_PATH);
+		movieInfoFolder.mkdirs();
+		File posterFolder = new File(OMDbManagerConstants.POSTER_PATH);
+		posterFolder.mkdirs();
+	}
 
 	public String getMovie(String[] command) throws IOException {
 		String title = OMDbManagerUtil.getTitle(command, OMDbManagerConstants.FIELDS);

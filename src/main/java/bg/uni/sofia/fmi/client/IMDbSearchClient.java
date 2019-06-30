@@ -46,8 +46,10 @@ public class IMDbSearchClient {
 	}
 
 	private String readFromServer(Socket clientSocket) throws IOException {
+		File posterFolder = new File(POSTER_PATH);
+		posterFolder.mkdirs();
+		
 		String movieInfo;
-
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
 			while (!(movieInfo = reader.readLine()).equals("EndOfFile")) {
 
