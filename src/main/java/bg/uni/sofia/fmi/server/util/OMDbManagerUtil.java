@@ -74,12 +74,9 @@ public class OMDbManagerUtil {
 	}
 
 	public static URL createURL(String title) throws MalformedURLException, UnsupportedEncodingException {
-
-		String url = "http://www.omdbapi.com/";
-		String charset = "UTF-8";
-		String query = String.format("t=%s&apikey=6c5a486c", URLEncoder.encode(title, charset));
-
-		return new URL(url + "?" + query);
+		
+		String query = String.format(OMDbManagerConstants.OMDB_API_KEY, URLEncoder.encode(title, "UTF-8"));
+		return new URL(OMDbManagerConstants.OMDB_URL + "?" + query);
 	}
 	
 	public static void findFields(String inputLine, String[] command, int crr, BufferedWriter writer) throws IOException {
@@ -114,12 +111,11 @@ public class OMDbManagerUtil {
 
 		inputLine = inputLine.replaceAll("\\{|\\}|\\[", "");
 		String[] word = inputLine.split(":|\\,");
-		String title = "Title";
 
 		for (int i = 1; i < word.length; ++i) {
 			word[i] = word[i].replaceAll("\"", "");
 
-			if (word[i].equals(title)) {
+			if (word[i].equals(OMDbManagerConstants.TITLE)) {
 
 				++i;
 				word[i] = word[i].replaceFirst("\"", "");
@@ -135,7 +131,7 @@ public class OMDbManagerUtil {
 		}
 	}
 
-	public static void filtringMovies(Path entry, int genres, int actors, String[] command, Map<Double, String> movies,
+	public static void filtringMovies(Path entry, int genresFieldIndex, int actorsFieldIndex, String[] command, Map<Double, String> movies,
 			double imdbRating) throws FileNotFoundException, IOException {
 
 		int counter = 0;
@@ -147,20 +143,18 @@ public class OMDbManagerUtil {
 			while ((inputLine = reader.readLine()) != null) {
 	
 				String[] words = inputLine.split(":|\\,");
-	
 				for (int i = 0; i < words.length; ++i) {
 					words[i] = words[i].replaceAll("\"", "");
 					words[i] = words[i].replaceAll(" ", "");
 	
-					if (genres != 0) {
-	
-						if (words[i].equals(command[genres + 1]) || words[i].equals(command[genres + 2])) {
+					if (genresFieldIndex != 0) {
+						if (words[i].equals(command[genresFieldIndex + 1]) || words[i].equals(command[genresFieldIndex + 2])) {
 							++countGenres;
 						}
 					}
 	
-					if (words[i].equals(command[actors + 1] + command[actors + 2])
-							|| words[i].equals(command[actors + 3] + command[actors + 4])) {
+					if (words[i].equals(command[actorsFieldIndex + 1] + command[actorsFieldIndex + 2])
+							|| words[i].equals(command[actorsFieldIndex + 3] + command[actorsFieldIndex + 4])) {
 						++countActors;
 					}
 	
@@ -170,11 +164,11 @@ public class OMDbManagerUtil {
 					}
 				}
 	
-				if (genres != 0 && countGenres == 2) {
+				if (genresFieldIndex != 0 && countGenres == 2) {
 					++counter;
 				}
 	
-				if ((countActors == 2 && genres != 0 && counter != 0) || (countActors == 2 && genres == 0)) {
+				if ((countActors == 2 && genresFieldIndex != 0 && counter != 0) || (countActors == 2 && genresFieldIndex == 0)) {
 					movies.put(imdbRating, entry.getFileName().toString().replaceFirst("[.][^.]+$", ""));
 				}
 			}
