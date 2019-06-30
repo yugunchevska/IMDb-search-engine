@@ -17,15 +17,14 @@ public class IMDbSearchClient {
 
 	private static final String POSTER_PATH = "Client" + File.separator + "Posters";
 
-	public IMDbSearchClient(int port) {
+	public IMDbSearchClient(int port) throws IOException {
 
-		try {
-			Socket clientSocket = new Socket("localhost", port);
-			PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
-			Scanner scanner = new Scanner(System.in);			
+		try (Socket clientSocket = new Socket("localhost", port);
+				PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
+				Scanner scanner = new Scanner(System.in)) {
+
 			String command;
 			boolean running = true;
-
 			while (running) {
 				System.out.println("Enter a command: ");
 
@@ -37,60 +36,57 @@ public class IMDbSearchClient {
 
 				writer.write(command);
 				writer.flush();
-				
+
 				System.out.println(readFromServer(clientSocket));
 			}
-
-			writer.close();
-			clientSocket.close();
-			scanner.close();
-
-		} catch (UnknownHostException e) {
-			System.out.println("UnknownHostException found.");
-			e.printStackTrace();
 		} catch (IOException e) {
-			System.out.println("IOException found.");
-			e.printStackTrace();
+			System.out.println("Couldn't open a socket. Reason: " + e.getMessage());
+			throw new IOException(e);
 		}
 	}
 
-	private String readFromServer(Socket clientSocket) throws FileNotFoundException, IOException {
-		BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+	private String readFromServer(Socket clientSocket) throws IOException {
 		String movieInfo;
-		
-		while (!(movieInfo = reader.readLine()).equals("EndOfFile")) {
-		
-			if (movieInfo.endsWith(".jpg")) {
-		
-				String movieTitle = movieInfo.replaceAll("\n", "");
-				String imagePath = POSTER_PATH + File.separator + movieTitle;
-				saveImage(clientSocket, imagePath);
-				System.out.println(imagePath);
-				
-				break;
+
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
+			while (!(movieInfo = reader.readLine()).equals("EndOfFile")) {
+
+				if (movieInfo.endsWith(".jpg")) {
+
+					String movieTitle = movieInfo.replaceAll("\n", "");
+					String imagePath = POSTER_PATH + File.separator + movieTitle;
+					saveImage(clientSocket, imagePath);
+					System.out.println(imagePath);
+
+					break;
+				}
 			}
-		}		
-		reader.close();
-			
-		return movieInfo;
+
+			return movieInfo;
+		} catch (IOException e) {
+			System.out.println("Couldn't read from the server. Reason: " + e.getMessage());
+			throw new IOException(e);
+		}
+
 	}
-	
+
 	private void saveImage(Socket clientSocket, String imagePath) throws IOException {
-		ByteArrayOutputStream bufferWriter = new ByteArrayOutputStream();
-		byte[] image = new byte[400_000];
-		int n = 0;
-		n = clientSocket.getInputStream().read(image);
-		bufferWriter.write(image, 0, n);
+		File imageFile = new File(imagePath);
+		try (ByteArrayOutputStream bufferWriter = new ByteArrayOutputStream();
+				OutputStream fileWriter = new FileOutputStream(imageFile)) {
 
-		File myFile = new File(imagePath);
-		OutputStream fileWriter = new FileOutputStream(myFile);
-		fileWriter.write(image);
-		
-		bufferWriter.close();
-		fileWriter.close();
+			byte[] image = new byte[400_000];
+			int imageLength = clientSocket.getInputStream().read(image);
+			bufferWriter.write(image, 0, imageLength);
+
+			fileWriter.write(image);
+		} catch (IOException e) {
+			System.out.println("Couldn't save poster. Reason: " + e.getMessage());
+			throw new IOException(e);
+		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 
 		IMDbSearchClient client = new IMDbSearchClient(4444);
 	}

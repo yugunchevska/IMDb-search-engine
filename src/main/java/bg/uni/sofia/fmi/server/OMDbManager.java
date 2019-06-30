@@ -53,24 +53,16 @@ public class OMDbManager {
 		}
 		
 		File movieInfoFile = new File(movieInfoPath);
-		// if the file does not exists, create a new one and fill it with information
-		// from the omdb api
 		if (!movieInfoFile.isFile()) {
-			try {
-				movieInfoFile.createNewFile();
-				URL omdbURL = createURL(title);
+			movieInfoFile.createNewFile();
+			URL omdbURL = createURL(title);
 
-				BufferedReader reader = new BufferedReader(new InputStreamReader(omdbURL.openStream()));
-				BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile));
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(omdbURL.openStream()));
+			BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile));) {
+				
 				String inputLine;
-
 				while ((inputLine = reader.readLine()) != null) {
-
-					// check if the movie title is incorrect
 					if (inputLine.equals(ERROR_MOVIE)) {
-						// delete the .txt file and return message to the client
-						writer.close();
-						reader.close();
 						movieInfoFile.delete();
 						return "Movie not found.";
 					}
@@ -78,31 +70,25 @@ public class OMDbManager {
 					if (fieldsIndex == 0) {
 						writer.write(inputLine);
 					} else {
-						// find the wanted fields and then find the fields' content
 						findFields(inputLine, command, fieldsIndex, writer);
 					}
 				}
-				reader.close();
-				writer.close();
-			} catch (MalformedURLException e) {
-				return "This is not a valid URL.";
-			} catch (IOException e) {
-				System.out.println("IOException found in the \"get-movie\" command.");
-				e.printStackTrace();
+			} catch(IOException e) {
+				System.out.println("Couldn't take information from OMDb API. Reason: " + e.getMessage());
+				throw new IOException(e);
 			}
 		}
 
 		return movieInfoPath;
 	}
 
-	public String getTVSeries(String[] command) {
+	public String getTVSeries(String[] command) throws IOException {
 
 		String title = getTitle(command, SEASON_FIELD);
 		String titlePath = replaceSpecialCharacters(title);
 		int seasonIndex = getIndex(command, SEASON_FIELD);
 
 		String movieInfoPath;
-
 		if (seasonIndex == 0) {
 			movieInfoPath = MOVIE_INFO_PATH + File.separator + titlePath + ".txt";
 		} else {
@@ -110,69 +96,52 @@ public class OMDbManager {
 		}
 
 		File movieInfoFile = new File(movieInfoPath);
-
 		if (!movieInfoFile.isFile()) {
 
-			try {
-				movieInfoFile.createNewFile();
-				URL omdbURL;
-				if (seasonIndex == 0) {
-					omdbURL = createURL(title);
+			movieInfoFile.createNewFile();
+			URL omdbURL;
+			if (seasonIndex == 0) {
+				omdbURL = createURL(title);
+			} else {
+				String url = "http://www.omdbapi.com/";
+				String charset = "UTF-8";
+				String query = String.format("t=%s&Season=%s&apikey=6c5a486c", URLEncoder.encode(title, charset),
+						URLEncoder.encode(command[seasonIndex + 1], charset));
+				omdbURL = new URL(url + "?" + query);
+			}
 
-				} else {
-					String url = "http://www.omdbapi.com/";
-					String charset = "UTF-8";
-					String query = String.format("t=%s&Season=%s&apikey=6c5a486c", URLEncoder.encode(title, charset),
-							URLEncoder.encode(command[seasonIndex + 1], charset));
-					omdbURL = new URL(url + "?" + query);
-				}
-
-				BufferedReader in = new BufferedReader(new InputStreamReader(omdbURL.openStream()));
-
-				BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile));
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(omdbURL.openStream()));
+					BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile))) {
+				
 				String inputLine;
-				while ((inputLine = in.readLine()) != null) {
-					// check if the series or the season are correct
+				while ((inputLine = reader.readLine()) != null) {
 					if (seasonIndex == 0) {
 						if (inputLine.equals(ERROR_MOVIE)) {
-							// delete the .txt file and return message to the client
-							writer.close();
-							in.close();
 							movieInfoFile.delete();
 							return "Series not found.";
 						}
-						// if everything is correct, take it from the api
+						
 						writer.write(inputLine);
 					} else {
 
 						if (inputLine.equals(ERROR_SEASON)) {
-							// delete the .txt file and return message to the client
-							writer.close();
-							in.close();
 							movieInfoFile.delete();
 							return "Series or season not found.";
 						}
 
-						// take the titles of the episodes
 						titlePerEpisode(inputLine, writer);
 					}
 				}
-				in.close();
-				writer.close();
-
-			} catch (MalformedURLException e) {
-				return "This is not a valid URL.";
-
 			} catch (IOException e) {
-				System.out.println("IOException found in the \"get-tv-series\" command.");
-				e.printStackTrace();
+				System.out.println("Couldn't take information from OMDb API. Reason: " + e.getMessage());
+				throw new IOException(e);
 			}
 
 		}
 		return movieInfoPath;
 	}
 
-	public String getMovies(String[] command) {
+	public String getMovies(String[] command) throws IOException {
 
 		int genresFieldIndex = 0, actorsFieldIndex = 0, orderFieldIndex = 0;
 		for (int i = 1; i < command.length; ++i) {
@@ -190,7 +159,6 @@ public class OMDbManager {
 			}
 		}
 
-		// remove "," from the command
 		if (genresFieldIndex != 0) {
 			command[genresFieldIndex + 1] = command[genresFieldIndex + 1].replace(",", "");
 		}
@@ -198,37 +166,27 @@ public class OMDbManager {
 
 		String movieInfoPath = MOVIE_INFO_PATH + File.separator + "Movies with " + command[actorsFieldIndex + 1] + " " + command[actorsFieldIndex + 3]
 				+ ".txt";
-		// create new file using the name of the actors, because they are always include
+
 		File movieInfoFile = new File(movieInfoPath);
-		try {
-			movieInfoFile.createNewFile();
+		movieInfoFile.createNewFile();
 
-		} catch (IOException e1) {
-			System.out.println("Creating new file failed.");
-			e1.printStackTrace();
-		}
-
-		// getting all files that ends with .txt
 		Path movieInfoDir = Paths.get(MOVIE_INFO_PATH);
 		double imdbRating = 0;
 		Map<Double, String> movies = new HashMap<>();
 
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(movieInfoDir, "*.txt")) {
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(movieInfoDir, "*.txt");
+				BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile))) {
 
-			BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile));
-			// finding the movies with that actors/genres and putting them in the hashMap
 			for (Path entry : stream) {
 				filtringMovies(entry, genresFieldIndex, actorsFieldIndex, command, movies, imdbRating);
 			}
 
 			if (movies.isEmpty()) {
-				writer.close();
 				return "There are none movies with these actors and gernes.";
 			}
 
-			// ordering the movies by imdbRating if the client wants it
 			if (orderFieldIndex != 0) {		
-				if (!orderingMovies(movies, command, orderFieldIndex, writer)) {
+				if (!orderingMovies(movies, command, orderFieldIndex, movieInfoFile)) {
 					return "Wrong command on field \"order\".";
 				}
 			} else {
@@ -237,67 +195,47 @@ public class OMDbManager {
 					writer.newLine();
 				}
 			}
-
-			writer.close();
 		} catch (IOException e) {
-			System.out.println("IOException found in the \"get-movies\" command.");
-			e.printStackTrace();
-		} catch (DirectoryIteratorException ex) {
-			System.out.println("DirectoryIteratorException found in the \"get-movies\" command.");
-			ex.printStackTrace();
+			System.out.println("Couldn't get information from the server. Reason: " + e.getMessage());
+			throw new IOException(e);
 		}
 
 		return movieInfoPath;
 	}
 
-	public String getPoster(String[] command) {
+	public String getPoster(String[] command) throws IOException {
 
-		// take the title
 		String title = getTitle(command, "");
 		String titlePath = replaceSpecialCharacters(title);
 
-		// create a path and a file
 		String movieInfoPath = POSTER_PATH + File.separator + titlePath + ".jpg";
 		File movieInfoFile = new File(movieInfoPath);
-
 		if (!movieInfoFile.isFile()) {
 
-			try {
-				movieInfoFile.createNewFile();
-				URL omdbURL = createURL(title);
+			movieInfoFile.createNewFile();
+			URL omdbURL = createURL(title);
 
-				BufferedReader reader = new BufferedReader(new InputStreamReader(omdbURL.openStream()));
-				String inputLine;
-				String posterURL = "";
+			String inputLine;
+			String posterURL = "";
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(omdbURL.openStream()))) {
 
-				// searching for the Poster's URL
 				while ((inputLine = reader.readLine()) != null) {
-
-					// if the title is not correct
+	
 					if (inputLine.equals(ERROR_MOVIE)) {
-						// delete the .txt file and return message to the client
-						reader.close();
 						movieInfoFile.delete();
 						return "Movie not found.";
 					}
-
 					posterURL = findPosterURL(inputLine);
 				}
-				reader.close();
-
-				// download the poster
+				
 				downloadPoster(posterURL, movieInfoFile);
-
-			} catch (MalformedURLException e) {
-				return "This is not a valid URL.";
 			} catch (IOException e) {
-				System.out.println("IOException found in the \"get-movie-poster\" command.");
-				e.printStackTrace();
+				System.out.println("Couldn't download the movie's poster. Reason: " + e.getMessage());
+				throw new IOException(e);
 			}
 		}
 
 		return movieInfoFile.getName();
-
 	}
 
 	public String getTitle(String[] command, String stopword) {
@@ -320,17 +258,16 @@ public class OMDbManager {
 	}
 
 	public int getIndex(String[] command, String field) {
-		int crr = 0;
+		int fieldIndex = 0;
 		for (int i = 1; i < command.length; ++i) {
 			if (command[i].equals(field)) {
-				crr = i;
+				fieldIndex = i;
 				break;
 			}
 		}
-		return crr;
+		return fieldIndex;
 	}
 
-	// remove commas for get-movie command and return string to create a unique path
 	public String removeCommas(int crr, String[] command) {
 		String str = "";
 		int i = crr + 1;
@@ -409,56 +346,56 @@ public class OMDbManager {
 			double imdbRating) throws FileNotFoundException, IOException {
 
 		int counter = 0;
-
-		BufferedReader br = new BufferedReader(new FileReader(entry.toString()));
 		String inputLine;
 		int countGenres = 0, countActors = 0;
-
-		while ((inputLine = br.readLine()) != null) {
-
-			String[] words = inputLine.split(":|\\,");
-
-			for (int i = 0; i < words.length; ++i) {
-				words[i] = words[i].replaceAll("\"", "");
-				words[i] = words[i].replaceAll(" ", "");
-
-				if (genres != 0) {
-
-					if (words[i].equals(command[genres + 1]) || words[i].equals(command[genres + 2])) {
-						++countGenres;
+		
+		try (BufferedReader reader = new BufferedReader(new FileReader(entry.toString()))) {	
+	
+			while ((inputLine = reader.readLine()) != null) {
+	
+				String[] words = inputLine.split(":|\\,");
+	
+				for (int i = 0; i < words.length; ++i) {
+					words[i] = words[i].replaceAll("\"", "");
+					words[i] = words[i].replaceAll(" ", "");
+	
+					if (genres != 0) {
+	
+						if (words[i].equals(command[genres + 1]) || words[i].equals(command[genres + 2])) {
+							++countGenres;
+						}
+					}
+	
+					if (words[i].equals(command[actors + 1] + command[actors + 2])
+							|| words[i].equals(command[actors + 3] + command[actors + 4])) {
+						++countActors;
+					}
+	
+					if (words[i].equals("imdbRating")) {
+						words[i + 1] = words[i + 1].replaceAll("\"", "");
+						imdbRating = Double.parseDouble(words[i + 1].replace(",", "."));
 					}
 				}
-
-				if (words[i].equals(command[actors + 1] + command[actors + 2])
-						|| words[i].equals(command[actors + 3] + command[actors + 4])) {
-					++countActors;
+	
+				if (genres != 0 && countGenres == 2) {
+					++counter;
 				}
-
-				if (words[i].equals("imdbRating")) {
-					words[i + 1] = words[i + 1].replaceAll("\"", "");
-					imdbRating = Double.parseDouble(words[i + 1].replace(",", "."));
+	
+				if ((countActors == 2 && genres != 0 && counter != 0) || (countActors == 2 && genres == 0)) {
+					movies.put(imdbRating, entry.getFileName().toString().replaceFirst("[.][^.]+$", ""));
 				}
-			}
-
-			if (genres != 0 && countGenres == 2) {
-				++counter;
-			}
-
-			if ((countActors == 2 && genres != 0 && counter != 0) || (countActors == 2 && genres == 0)) {
-				movies.put(imdbRating, entry.getFileName().toString().replaceFirst("[.][^.]+$", ""));
 			}
 		}
-		br.close();
 	}
 
-	public boolean orderingMovies(Map<Double, String> movies, String[] command, int order, BufferedWriter writer)
+	public boolean orderingMovies(Map<Double, String> movies, String[] command, int orderIndex, File movieInfoFile)
 			throws IOException {
 
 		Map<Double, String> sortedMovies;
 
-		if (command[order + 1].equals("asc")) {
+		if (command[orderIndex + 1].equals("asc")) {
 			sortedMovies = new TreeMap<>(movies);
-		} else if (command[order + 1].equals("desc")) {
+		} else if (command[orderIndex + 1].equals("desc")) {
 			sortedMovies = new TreeMap<>(Collections.reverseOrder());
 			for (Map.Entry<Double, String> entry : movies.entrySet()) {
 				sortedMovies.put(entry.getKey(), entry.getValue());
@@ -466,9 +403,12 @@ public class OMDbManager {
 		} else {
 			return false;
 		}
-		for (Double key : sortedMovies.keySet()) {
-			writer.write(sortedMovies.get(key));
-			writer.newLine();
+		
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(movieInfoFile))) {
+			for (Double key : sortedMovies.keySet()) {
+				writer.write(sortedMovies.get(key));
+				writer.newLine();
+			}
 		}
 
 		return true;
@@ -498,17 +438,15 @@ public class OMDbManager {
 	public void downloadPoster(String posterURL, File movieInfoFile) throws MalformedURLException, IOException {
 		URL poster = new URL(posterURL);
 
-		InputStream is = poster.openStream();
-		OutputStream os = new FileOutputStream(movieInfoFile);
+		try (InputStream reader = poster.openStream();
+				OutputStream writer = new FileOutputStream(movieInfoFile)) {
 
-		byte[] b = new byte[2048];
-		int length;
-
-		while ((length = is.read(b)) != -1) {
-			os.write(b, 0, length);
+			byte[] b = new byte[2048];
+			int length;
+	
+			while ((length = reader.read(b)) != -1) {
+				writer.write(b, 0, length);
+			}
 		}
-
-		is.close();
-		os.close();
 	}
 }

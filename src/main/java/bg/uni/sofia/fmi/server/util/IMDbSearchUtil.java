@@ -14,12 +14,12 @@ import java.nio.charset.StandardCharsets;
 import bg.uni.sofia.fmi.server.OMDbManager;
 
 public class IMDbSearchUtil {
-	
+
 	private static SocketChannel socket;
-	
+
 	public static String getCommand(SelectionKey key) throws IOException {
 		String command = null;
-		
+
 		if (key.isReadable()) {
 			socket = (SocketChannel) key.channel();
 			while (true) {
@@ -30,17 +30,17 @@ public class IMDbSearchUtil {
 					break;
 				}
 				buffer.flip();
-				
-				command = StandardCharsets.UTF_8.decode(buffer).toString();					
+
+				command = StandardCharsets.UTF_8.decode(buffer).toString();
 			}
 		}
-		
-		return command;	
+
+		return command;
 	}
-	
+
 	public static String getMovieInfoFilepath(String command, OMDbManager omdbManager) throws IOException {
 		String[] commands = command.split(" ");
-	
+
 		switch (commands[0]) {
 		case ("get-movie"):
 			return omdbManager.getMovie(commands);
@@ -53,15 +53,15 @@ public class IMDbSearchUtil {
 		default:
 			return "Wrong commmand: " + command;
 		}
-	
+
 	}
 
-	public static void sendContentToClient(String path) throws IOException {
-		File myFile = new File(path);
-		
-		if (path.endsWith(".txt")) {
-			
-			try (BufferedReader reader = new BufferedReader(new FileReader(myFile))) {
+	public static void sendContentToClient(String movieInfoPath) throws IOException {
+		File movieInfoFile = new File(movieInfoPath);
+
+		if (movieInfoPath.endsWith(".txt")) {
+
+			try (BufferedReader reader = new BufferedReader(new FileReader(movieInfoFile))) {
 				String line;
 
 				while ((line = reader.readLine()) != null) {
@@ -70,15 +70,15 @@ public class IMDbSearchUtil {
 				}
 				socket.write(ByteBuffer.wrap(("EndOfFile" + "\n").getBytes()));
 
-			} catch (Exception e) {
-				System.out.println("Exception found on the transfer.");
-				e.printStackTrace();
+			} catch (IOException e) {
+				System.out.println("Could't send information about the movie. Reason: " + e.getMessage());
+				throw new IOException(e);
 			}
-		} else if (path.endsWith(".jpg")) {
+		} else if (movieInfoPath.endsWith(".jpg")) {
 
-				socket.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
+			socket.write(ByteBuffer.wrap((movieInfoPath + "\n" + "EndOfFile" + "\n").getBytes()));
 
-				InputStream reader = new FileInputStream(myFile);
+			try (InputStream reader = new FileInputStream(movieInfoFile)) {
 				byte[] imageBuffer = new byte[reader.available()];
 				reader.read(imageBuffer);
 
@@ -87,11 +87,14 @@ public class IMDbSearchUtil {
 				image.put(imageBuffer);
 				image.flip();
 				socket.write(image);
+			} catch (IOException e) {
+				System.out.println("Couldn't send movie's poster. Reason: " + e.getMessage());
+				throw new IOException(e);
+			}
 
-				reader.close();
-		} else { 
-			socket.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
-		}		
+		} else {
+			socket.write(ByteBuffer.wrap((movieInfoPath + "\n" + "EndOfFile" + "\n").getBytes()));
+		}
 	}
 
 }
