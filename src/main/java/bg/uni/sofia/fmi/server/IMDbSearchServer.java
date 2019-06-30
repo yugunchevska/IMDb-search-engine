@@ -18,14 +18,14 @@ public class IMDbSearchServer implements AutoCloseable {
 	private OMDbManager omdbManager = new OMDbManager();
 
 	public IMDbSearchServer(int port) throws IOException {
-		ServerSocketChannel ssc = ServerSocketChannel.open();
-		ssc.configureBlocking(false);
+		ServerSocketChannel socketChannel = ServerSocketChannel.open();
+		socketChannel.configureBlocking(false);
 
-		ServerSocket ss = ssc.socket();
-		ss.bind(new InetSocketAddress(port));
+		ServerSocket serverSocket = socketChannel.socket();
+		serverSocket.bind(new InetSocketAddress(port));
 
 		selector = Selector.open();
-		ssc.register(selector, SelectionKey.OP_ACCEPT);
+		socketChannel.register(selector, SelectionKey.OP_ACCEPT);
 	}
 
 	public void start() throws IOException {
@@ -48,8 +48,8 @@ public class IMDbSearchServer implements AutoCloseable {
 				if(command == null || command.isEmpty()) {
 					continue;
 				}
-				String path = IMDbSearchUtil.getFilepath(command, omdbManager);
-				IMDbSearchUtil.sendContentToClient(path);
+				String movieInfoPath = IMDbSearchUtil.getMovieInfoFilepath(command, omdbManager);
+				IMDbSearchUtil.sendContentToClient(movieInfoPath);
 
 				iteratorKeys.remove();
 			}
@@ -60,11 +60,11 @@ public class IMDbSearchServer implements AutoCloseable {
 	public void acceptKey(SelectionKey key) throws IOException {
 
 		ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-		SocketChannel sc = ssc.accept();
-		sc.configureBlocking(false);
-		sc.register(selector, SelectionKey.OP_READ);
+		SocketChannel socketChannel = ssc.accept();
+		socketChannel.configureBlocking(false);
+		socketChannel.register(selector, SelectionKey.OP_READ);
 
-		System.out.println("Client " + sc + " connected.");
+		System.out.println("Client " + socketChannel + " connected.");
 	}
 
 	@Override

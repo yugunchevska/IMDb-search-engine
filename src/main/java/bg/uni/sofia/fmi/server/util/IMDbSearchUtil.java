@@ -15,17 +15,17 @@ import bg.uni.sofia.fmi.server.OMDbManager;
 
 public class IMDbSearchUtil {
 	
-	private static SocketChannel sc;
+	private static SocketChannel socket;
 	
 	public static String getCommand(SelectionKey key) throws IOException {
 		String command = null;
 		
 		if (key.isReadable()) {
-			sc = (SocketChannel) key.channel();
+			socket = (SocketChannel) key.channel();
 			while (true) {
 				ByteBuffer buffer = ByteBuffer.allocate(10_000);
 				buffer.clear();
-				int r = sc.read(buffer);
+				int r = socket.read(buffer);
 				if (r <= 0) {
 					break;
 				}
@@ -38,7 +38,7 @@ public class IMDbSearchUtil {
 		return command;	
 	}
 	
-	public static String getFilepath(String command, OMDbManager omdbManager) throws IOException {
+	public static String getMovieInfoFilepath(String command, OMDbManager omdbManager) throws IOException {
 		String[] commands = command.split(" ");
 	
 		switch (commands[0]) {
@@ -61,14 +61,14 @@ public class IMDbSearchUtil {
 		
 		if (path.endsWith(".txt")) {
 			
-			try (BufferedReader br = new BufferedReader(new FileReader(myFile))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(myFile))) {
 				String line;
 
-				while ((line = br.readLine()) != null) {
+				while ((line = reader.readLine()) != null) {
 
-					sc.write(ByteBuffer.wrap((line + "\n").getBytes()));
+					socket.write(ByteBuffer.wrap((line + "\n").getBytes()));
 				}
-				sc.write(ByteBuffer.wrap(("EndOfFile" + "\n").getBytes()));
+				socket.write(ByteBuffer.wrap(("EndOfFile" + "\n").getBytes()));
 
 			} catch (Exception e) {
 				System.out.println("Exception found on the transfer.");
@@ -76,21 +76,21 @@ public class IMDbSearchUtil {
 			}
 		} else if (path.endsWith(".jpg")) {
 
-				sc.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
+				socket.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
 
-				InputStream is = new FileInputStream(myFile);
-				byte[] imageBuffer = new byte[is.available()];
-				is.read(imageBuffer);
+				InputStream reader = new FileInputStream(myFile);
+				byte[] imageBuffer = new byte[reader.available()];
+				reader.read(imageBuffer);
 
 				ByteBuffer image = ByteBuffer.allocate(400_000);
 				image.clear();
 				image.put(imageBuffer);
 				image.flip();
-				sc.write(image);
+				socket.write(image);
 
-				is.close();
+				reader.close();
 		} else { 
-			sc.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
+			socket.write(ByteBuffer.wrap((path + "\n" + "EndOfFile" + "\n").getBytes()));
 		}		
 	}
 

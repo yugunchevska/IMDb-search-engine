@@ -15,41 +15,35 @@ import java.util.Scanner;
 
 public class IMDbSearchClient {
 
-	private final String MAIN_PATH = "D:" + File.separator + "”ÌË" + File.separator + "Eclipse new" + File.separator
-			+ "Project vol.2" + File.separator + "Client";
+	private static final String POSTER_PATH = "Client" + File.separator + "Posters";
 
 	public IMDbSearchClient(int port) {
 
 		try {
-			Socket s = new Socket("localhost", port);
-			PrintWriter pw = new PrintWriter(s.getOutputStream());
-			Scanner sc = new Scanner(System.in);
+			Socket clientSocket = new Socket("localhost", port);
+			PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
+			Scanner scanner = new Scanner(System.in);			
+			String command;
+			boolean running = true;
 
-			BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
-			String readLine;
-
-			boolean foo = true;
-
-			while (foo) {
+			while (running) {
 				System.out.println("Enter a command: ");
 
-				readLine = sc.nextLine();
-				if (readLine.equals("quit")) {
-					foo = false;
+				command = scanner.nextLine();
+				if (command.equals("quit")) {
+					running = false;
 					break;
 				}
 
-				pw.write(readLine);
-				pw.flush();
+				writer.write(command);
+				writer.flush();
 				
-				String str = readFromServer(s, br);
-				System.out.println(str);
+				System.out.println(readFromServer(clientSocket));
 			}
 
-			pw.close();
-			br.close();
-			s.close();
-			sc.close();
+			writer.close();
+			clientSocket.close();
+			scanner.close();
 
 		} catch (UnknownHostException e) {
 			System.out.println("UnknownHostException found.");
@@ -60,37 +54,40 @@ public class IMDbSearchClient {
 		}
 	}
 
-	private String readFromServer(Socket s, BufferedReader br) throws FileNotFoundException, IOException {
-		String line;
-
-		while (!(line = br.readLine()).equals("yuli")) {
-
-			if (line.endsWith(".jpg")) {
-
-				String title = line.replaceAll("\n", "");
-				String path = MAIN_PATH + File.separator + title;
-				saveImage(s, path);
-				System.out.println(path);
+	private String readFromServer(Socket clientSocket) throws FileNotFoundException, IOException {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		String movieInfo;
+		
+		while (!(movieInfo = reader.readLine()).equals("EndOfFile")) {
+		
+			if (movieInfo.endsWith(".jpg")) {
+		
+				String movieTitle = movieInfo.replaceAll("\n", "");
+				String imagePath = POSTER_PATH + File.separator + movieTitle;
+				saveImage(clientSocket, imagePath);
+				System.out.println(imagePath);
 				
 				break;
 			}
-		}
-		
-	  return line;
+		}		
+		reader.close();
+			
+		return movieInfo;
 	}
 	
-	private void saveImage(Socket s, String path) throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		byte[] buffer = new byte[400_000];
+	private void saveImage(Socket clientSocket, String imagePath) throws IOException {
+		ByteArrayOutputStream bufferWriter = new ByteArrayOutputStream();
+		byte[] image = new byte[400_000];
 		int n = 0;
-		n = s.getInputStream().read(buffer);
-		baos.write(buffer, 0, n);
+		n = clientSocket.getInputStream().read(image);
+		bufferWriter.write(image, 0, n);
 
-		File myFile = new File(path);
-		OutputStream os = new FileOutputStream(myFile);
-		os.write(buffer);
+		File myFile = new File(imagePath);
+		OutputStream fileWriter = new FileOutputStream(myFile);
+		fileWriter.write(image);
 		
-		os.close();
+		bufferWriter.close();
+		fileWriter.close();
 	}
 
 	public static void main(String[] args) {
