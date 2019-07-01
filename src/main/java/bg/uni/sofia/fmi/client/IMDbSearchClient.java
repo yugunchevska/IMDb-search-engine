@@ -3,14 +3,12 @@ package bg.uni.sofia.fmi.client;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Scanner;
 
 public class IMDbSearchClient {
@@ -46,6 +44,7 @@ public class IMDbSearchClient {
 	}
 
 	private String readFromServer(Socket clientSocket) throws IOException {
+		
 		File posterFolder = new File(POSTER_PATH);
 		posterFolder.mkdirs();
 		
@@ -73,7 +72,9 @@ public class IMDbSearchClient {
 	}
 
 	private void saveImage(Socket clientSocket, String imagePath) throws IOException {
+		
 		File imageFile = new File(imagePath);
+		
 		try (ByteArrayOutputStream bufferWriter = new ByteArrayOutputStream();
 				OutputStream fileWriter = new FileOutputStream(imageFile)) {
 

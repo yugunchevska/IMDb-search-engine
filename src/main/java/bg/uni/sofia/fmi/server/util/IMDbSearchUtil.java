@@ -18,6 +18,7 @@ public class IMDbSearchUtil {
 	private static SocketChannel socket;
 
 	public static String getCommand(SelectionKey key) throws IOException {
+		
 		String command = null;
 
 		if (key.isReadable()) {
@@ -39,6 +40,7 @@ public class IMDbSearchUtil {
 	}
 
 	public static String getMovieInfoFilepath(String command, OMDbManager omdbManager) throws IOException {
+		
 		String[] commands = command.split(" ");
 
 		switch (commands[0]) {
@@ -57,6 +59,7 @@ public class IMDbSearchUtil {
 	}
 
 	public static void sendContentToClient(String movieInfoPath) throws IOException {
+		
 		File movieInfoFile = new File(movieInfoPath);
 
 		if (movieInfoPath.endsWith(".txt")) {

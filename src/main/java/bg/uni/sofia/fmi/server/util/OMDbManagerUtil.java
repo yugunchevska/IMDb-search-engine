@@ -22,6 +22,7 @@ import java.util.TreeMap;
 public class OMDbManagerUtil {
 	
 	public static String getTitle(String[] command, String stopword) {
+		
 		String title = "";
 
 		for (int i = 1; i < command.length; ++i) {
@@ -39,8 +40,10 @@ public class OMDbManagerUtil {
 		return title.replaceAll(":|\\?|\\*|\"", "_");
 	}
 	
-	public static String getMovieInfoPath(int fieldsIndex, String titleSpecification, String titleFilename) {		
+	public static String getMovieInfoPath(int fieldsIndex, String titleSpecification, String titleFilename) {
+		
 		String movieInfoPath;
+		
 		if (fieldsIndex == 0) {
 			movieInfoPath = OMDbManagerConstants.MOVIE_INFO_PATH + File.separator + titleFilename + ".txt";
 		} else {
@@ -51,7 +54,9 @@ public class OMDbManagerUtil {
 	}
 
 	public static int getIndex(String[] command, String field) {
+		
 		int fieldIndex = 0;
+		
 		for (int i = 1; i < command.length; ++i) {
 			if (command[i].equals(field)) {
 				fieldIndex = i;
@@ -61,32 +66,37 @@ public class OMDbManagerUtil {
 		return fieldIndex;
 	}
 
-	public static String removeCommas(int crr, String[] command) {
-		String str = "";
-		int i = crr + 1;
-		while (i != command.length) {
-			command[i] = command[i].replaceAll(",", "");
-			str += command[i];
-			str += " ";
-			++i;
+	public static String removeCommas(int fieldsIndex, String[] command) {
+		
+		String commandWithoutCommas = "";
+		int currentIndex = fieldsIndex + 1;
+		
+		while (currentIndex != command.length) {
+			command[currentIndex] = command[currentIndex].replaceAll(",", "");
+			commandWithoutCommas += command[currentIndex];
+			commandWithoutCommas += " ";
+			++currentIndex;
 		}
-		return str;
+		
+		return commandWithoutCommas;
 	}
 
 	public static URL createURL(String title) throws MalformedURLException, UnsupportedEncodingException {
 		
 		String query = String.format(OMDbManagerConstants.OMDB_API_KEY, URLEncoder.encode(title, "UTF-8"));
+		
 		return new URL(OMDbManagerConstants.OMDB_URL + "?" + query);
 	}
 	
-	public static void findFields(String inputLine, String[] command, int crr, BufferedWriter writer) throws IOException {
+	public static void findFields(String inputLine, String[] command, int fieldsIndex, BufferedWriter writer) throws IOException {
 
 		inputLine = inputLine.replaceAll("\\{|\\}", "");
 		String[] word = inputLine.split(":|\\,");
 
 		for (int i = 0; i < word.length; ++i) {
 			word[i] = word[i].replaceAll("\"", "");
-			int j = crr + 1;
+			int j = fieldsIndex + 1;
+			
 			while (j != command.length) {
 				if (word[i].equals(command[j])) {
 
@@ -98,6 +108,7 @@ public class OMDbManagerUtil {
 						writer.write(word[i] + ",");
 						++i;
 					}
+					
 					word[i] = word[i].replaceAll("\"", "");
 					writer.write(word[i]);
 					writer.newLine();
@@ -124,6 +135,7 @@ public class OMDbManagerUtil {
 					writer.write(word[i] + ",");
 					++i;
 				}
+				
 				word[i] = word[i].replaceAll("\"", "");
 				writer.write(word[i]);
 				writer.newLine();
@@ -143,6 +155,7 @@ public class OMDbManagerUtil {
 			while ((inputLine = reader.readLine()) != null) {
 	
 				String[] words = inputLine.split(":|\\,");
+				
 				for (int i = 0; i < words.length; ++i) {
 					words[i] = words[i].replaceAll("\"", "");
 					words[i] = words[i].replaceAll(" ", "");
@@ -201,6 +214,7 @@ public class OMDbManagerUtil {
 
 		String posterURL = "";
 		String[] words = inputLine.split(":|\\,");
+		
 		for (int i = 0; i < words.length; ++i) {
 			words[i] = words[i].replaceAll("\"", "");
 
@@ -215,10 +229,12 @@ public class OMDbManagerUtil {
 				posterURL += words[i];
 			}
 		}
+		
 		return posterURL;
 	}
 
 	public static void downloadPoster(String posterURL, File movieInfoFile) throws MalformedURLException, IOException {
+		
 		URL poster = new URL(posterURL);
 
 		try (InputStream reader = poster.openStream();

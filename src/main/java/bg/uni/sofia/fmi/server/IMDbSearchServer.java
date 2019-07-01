@@ -18,6 +18,7 @@ public class IMDbSearchServer implements AutoCloseable {
 	private OMDbManager omdbManager = new OMDbManager();
 
 	public IMDbSearchServer(int port) throws IOException {
+		
 		ServerSocketChannel socketChannel = ServerSocketChannel.open();
 		socketChannel.configureBlocking(false);
 
@@ -38,8 +39,10 @@ public class IMDbSearchServer implements AutoCloseable {
 
 			Set<SelectionKey> selectionKyes = selector.selectedKeys();
 			Iterator<SelectionKey> iteratorKeys = selectionKyes.iterator();
+			
 			while (iteratorKeys.hasNext()) {
 				SelectionKey key = iteratorKeys.next();
+				
 				if (key.isAcceptable()) {
 					acceptKey(key);
 				}
@@ -48,6 +51,7 @@ public class IMDbSearchServer implements AutoCloseable {
 				if(command == null || command.isEmpty()) {
 					continue;
 				}
+				
 				String movieInfoPath = IMDbSearchUtil.getMovieInfoFilepath(command, omdbManager);
 				IMDbSearchUtil.sendContentToClient(movieInfoPath);
 
@@ -57,7 +61,7 @@ public class IMDbSearchServer implements AutoCloseable {
 
 	}
 
-	public void acceptKey(SelectionKey key) throws IOException {
+	private void acceptKey(SelectionKey key) throws IOException {
 
 		ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
 		SocketChannel socketChannel = ssc.accept();
@@ -69,6 +73,7 @@ public class IMDbSearchServer implements AutoCloseable {
 
 	@Override
 	public void close() {
+		
 		if (selector != null) {
 			try {
 				selector.close();
